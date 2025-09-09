@@ -1,0 +1,42 @@
+name: Build eclipse.jdt.ls
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository with submodules
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v3
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: 'maven'
+
+    - name: Build eclipse.jdt.ls
+      run: |
+        # Navigate to the submodule directory if it's in a specific path
+        # If the submodule is at the root, you can skip this
+        # cd path/to/eclipse.jdt.ls
+        
+        # Make mvnw executable
+        chmod +x ./mvnw
+        
+        # Build with Java 21, skip tests, and update snapshots
+        JAVA_HOME=$JAVA_HOME ./mvnw clean verify -U -DskipTests=true
+
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: eclipse-jdt-ls-build
+        path: org.eclipse.jdt.ls.product/target/repository/
+        if-no-files-found: error
+        retention-days: 7
