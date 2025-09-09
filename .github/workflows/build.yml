@@ -38,6 +38,6 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: eclipse-jdt-ls-build
-        path: org.eclipse.jdt.ls.product/target/repository/
+        path: eclipse.jdt.ls/org.eclipse.jdt.ls.product/target/repository/
         if-no-files-found: error
         retention-days: 7
