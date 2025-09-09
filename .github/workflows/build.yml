@@ -26,6 +26,7 @@ jobs:
         # Navigate to the submodule directory if it's in a specific path
         # If the submodule is at the root, you can skip this
         # cd path/to/eclipse.jdt.ls
+        cd eclipse.jdt.ls
         
         # Make mvnw executable
         chmod +x ./mvnw
