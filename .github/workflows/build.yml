@@ -1,7 +1,19 @@
-name: Build eclipse.jdt.ls
+name: Build and Release eclipse.jdt.ls
 
 on:
   workflow_dispatch:
+    inputs:
+      release-tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+      release-notes:
+        description: 'Release notes'
+        required: false
+        default: 'Automated build of eclipse.jdt.ls'
+
+env:
+  BUILD_DIR: eclipse.jdt.ls
 
 jobs:
   build:
@@ -23,10 +35,8 @@ jobs:
 
     - name: Build eclipse.jdt.ls
       run: |
-        # Navigate to the submodule directory if it's in a specific path
-        # If the submodule is at the root, you can skip this
-        # cd path/to/eclipse.jdt.ls
-        cd eclipse.jdt.ls
+        # Navigate to the submodule directory
+        cd $BUILD_DIR
         
         # Make mvnw executable
         chmod +x ./mvnw
@@ -34,10 +44,49 @@ jobs:
         # Build with Java 21, skip tests, and update snapshots
         JAVA_HOME=$JAVA_HOME ./mvnw clean verify -U -DskipTests=true
 
-    - name: Upload build artifact
+    - name: Create build artifacts archive
+      run: |
+        cd $BUILD_DIR/org.eclipse.jdt.ls.product/target/repository/
+        tar -czf ../eclipse-jdt-ls-build.tar.gz .
+        cd ..
+        zip -r eclipse-jdt-ls-build.zip repository/
+
+    - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: eclipse-jdt-ls-build
-        path: eclipse.jdt.ls/org.eclipse.jdt.ls.product/target/repository/
-        if-no-files-found: error
+        path: |
+          ${{ env.BUILD_DIR }}/org.eclipse.jdt.ls.product/target/eclipse-jdt-ls-build.tar.gz
+          ${{ env.BUILD_DIR }}/org.eclipse.jdt.ls.product/target/eclipse-jdt-ls-build.zip
         retention-days: 7
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: eclipse-jdt-ls-build
+        path: ./artifacts
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.event.inputs.release-tag }}
+        name: ${{ github.event.inputs.release-tag }}
+        body: ${{ github.event.inputs.release-notes }}
+        files: |
+          ./artifacts/eclipse-jdt-ls-build.tar.gz
+          ./artifacts/eclipse-jdt-ls-build.zip
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload release artifacts to GitHub
+      run: |
+        echo "Release created successfully with artifacts:"
+        ls -la ./artifacts/
